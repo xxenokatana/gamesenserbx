@@ -29,7 +29,7 @@ FOVring.Radius = Settings.AimFOV
 FOVring.Color = Color3.fromRGB(255, 255, 255)
 FOVring.Filled = false
 
-### 2. Функция Аимбота
+2. Функция Аимбота
 function getClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = Settings.AimFOV
@@ -60,7 +60,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-### 3. Visuals (ВХ / ESP)
+3. Visuals (ВХ / ESP)
 -- Простое создание боксов вокруг игроков
 local function CreateESP(Player)
     -- Создаем Чамсы (заливка игрока через стены)
@@ -132,7 +132,7 @@ for _, p in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(CreateESP)
 
-### 4. BunnyHop
+4. BunnyHop
 RunService.RenderStepped:Connect(function()
     if Settings.Bhop and game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
