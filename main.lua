@@ -1,6 +1,5 @@
 --[[ 
     GAMESENSE.PUB (Skeet) for BloxStrike
-   
 --]]
 
 local Players = game:GetService("Players")
@@ -9,136 +8,147 @@ local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Подгружаем библиотеку интерфейса
+-- Загрузка интерфейса
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Глобальная таблица настроек (связывает меню и чит)
+-- Глобальные настройки
 getgenv().SkeetConfig = {
     Aimbot = false,
     AimPart = "Head",
     AimFOV = 150,
     ESP = false,
+    Tracers = false,
     Bhop = false,
     TeamCheck = true
 }
 
 local Window = Rayfield:CreateWindow({
-   Name = "BloxStrike | Gamesense.pub",
-   LoadingTitle = "Skeet.cc Loading...",
-   ConfigurationSaving = { Enabled = true, FileName = "SkeetConfig" }
+   Name = "BloxStrike | Skeet.cc",
+   LoadingTitle = "GAMESENSE.PUB",
+   ConfigurationSaving = { Enabled = false }
 })
 
--- Вкладка "Главная"
 local Tab = Window:CreateTab("Main", 4483362458)
 
 Tab:CreateSection("Combat")
-
--- Кнопка включения аимбота
 Tab:CreateToggle({
-   Name = "Aimbot (Hold Right Click)",
-   CurrentValue = false,
-   Callback = function(Value) 
-       getgenv().SkeetConfig.Aimbot = Value 
-   end,
+    Name = "Aimbot (Right Click)", 
+    CurrentValue = false, 
+    Callback = function(v) getgenv().SkeetConfig.Aimbot = v end
 })
-
--- Ползунок радиуса (FOV)
 Tab:CreateSlider({
-   Name = "Aim FOV",
-   Min = 50, Max = 800, CurrentValue = 150,
-   Callback = function(Value) 
-       getgenv().SkeetConfig.AimFOV = Value 
-   end,
+    Name = "FOV Radius", 
+    Min = 50, Max = 800, CurrentValue = 150, 
+    Callback = function(v) getgenv().SkeetConfig.AimFOV = v end
 })
 
 Tab:CreateSection("Visuals")
-
--- Кнопка включения ВХ
 Tab:CreateToggle({
-   Name = "ESP (Chams)",
-   CurrentValue = false,
-   Callback = function(Value) 
-       getgenv().SkeetConfig.ESP = Value 
-   end,
+    Name = "Box ESP", 
+    CurrentValue = false, 
+    Callback = function(v) getgenv().SkeetConfig.ESP = v end
+})
+Tab:CreateToggle({
+    Name = "Tracers", 
+    CurrentValue = false, 
+    Callback = function(v) getgenv().SkeetConfig.Tracers = v end
 })
 
 Tab:CreateSection("Movement")
-
 Tab:CreateToggle({
-   Name = "BunnyHop",
-   CurrentValue = false,
-   Callback = function(Value) 
-       getgenv().SkeetConfig.Bhop = Value 
-   end,
+    Name = "BunnyHop", 
+    CurrentValue = false, 
+    Callback = function(v) getgenv().SkeetConfig.Bhop = v end
 })
 
--- ЛОГИКА АИМБОТА
-local FOVring = Drawing.new("Circle")
-FOVring.Visible = true
-FOVring.Thickness = 1
-FOVring.Color = Color3.fromRGB(255, 255, 255)
-FOVring.Filled = false
+-- РЕНДЕР-ДВИЖОК ДЛЯ ВХ (BOX & TRACERS)
+local function API_RenderESP(Player)
+    local Box = Drawing.new("Square")
+    Box.Visible = false
+    Box.Color = Color3.fromRGB(255, 255, 255)
+    Box.Thickness = 1
+    Box.Filled = false
 
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = getgenv().SkeetConfig.AimFOV
-
-    for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild(getgenv().SkeetConfig.AimPart) then
-            if not getgenv().SkeetConfig.TeamCheck or v.Team ~= LocalPlayer.Team then
-                local pos, onScreen = Camera:WorldToViewportPoint(v.Character[getgenv().SkeetConfig.AimPart].Position)
-                if onScreen then
-                    local mousePos = UIS:GetMouseLocation()
-                    local magnitude = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                    if magnitude < shortestDistance then
-                        closestPlayer = v
-                        shortestDistance = magnitude
-                    end
-                end
-            end
-        end
-    end
-    return closestPlayer
-end
-
--- ЛОГИКА ВХ (ЧАМСЫ)
-local function CreateESP(Player)
-    local Highlight = Instance.new("Highlight")
-    Highlight.Name = "SkeetHighlight"
-    Highlight.Parent = game:GetService("CoreGui")
-    Highlight.FillTransparency = 0.5
-    Highlight.OutlineTransparency = 0
-    Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    local Tracer = Drawing.new("Line")
+    Tracer.Visible = false
+    Tracer.Color = Color3.fromRGB(255, 255, 255)
+    Tracer.Thickness = 1
 
     RunService.RenderStepped:Connect(function()
-        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and getgenv().SkeetConfig.ESP then
-            Highlight.Adornee = Player.Character
-            Highlight.Enabled = true
-            Highlight.FillColor = (Player.Team == LocalPlayer.Team) and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and Player.Character:FindFirstChild("Humanoid") and Player.Character.Humanoid.Health > 0 then
+            local RootPart = Player.Character.HumanoidRootPart
+            local Pos, OnScreen = Camera:WorldToViewportPoint(RootPart.Position)
+
+            if OnScreen and (not getgenv().SkeetConfig.TeamCheck or Player.Team ~= LocalPlayer.Team) then
+                local Color = (Player.Team == LocalPlayer.Team) and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+                
+                -- Отрисовка Бокса
+                if getgenv().SkeetConfig.ESP then
+                    local SizeX = 2000 / Pos.Z
+                    local SizeY = 3000 / Pos.Z
+                    Box.Size = Vector2.new(SizeX, SizeY)
+                    Box.Position = Vector2.new(Pos.X - SizeX / 2, Pos.Y - SizeY / 2)
+                    Box.Color = Color
+                    Box.Visible = true
+                else
+                    Box.Visible = false
+                end
+
+                -- Отрисовка Линий
+                if getgenv().SkeetConfig.Tracers then
+                    Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    Tracer.To = Vector2.new(Pos.X, Pos.Y)
+                    Tracer.Color = Color
+                    Tracer.Visible = true
+                else
+                    Tracer.Visible = false
+                end
+            else
+                Box.Visible = false
+                Tracer.Visible = false
+            end
         else
-            Highlight.Enabled = false
+            Box.Visible = false
+            Tracer.Visible = false
         end
     end)
 end
 
--- Запуск ВХ для всех
-for _, p in pairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then CreateESP(p) end
-end
-Players.PlayerAdded:Connect(CreateESP)
+-- Применяем ВХ ко всем игрокам
+for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then API_RenderESP(p) end end
+Players.PlayerAdded:Connect(function(p) if p ~= LocalPlayer then API_RenderESP(p) end end)
 
--- ОБЩИЙ ЦИКЛ ОБНОВЛЕНИЯ
+-- ЛОГИКА АИМБОТА И БХОПА
+local FOVring = Drawing.new("Circle")
+FOVring.Thickness = 1
+FOVring.Color = Color3.new(1, 1, 1)
+
 RunService.RenderStepped:Connect(function()
-    -- Обновляем кольцо FOV
+    -- Кольцо FOV
     FOVring.Radius = getgenv().SkeetConfig.AimFOV
     FOVring.Position = UIS:GetMouseLocation()
     FOVring.Visible = getgenv().SkeetConfig.Aimbot
 
-    -- Аимбот (срабатывает при зажатии правой кнопки мыши)
+    -- Аимбот
     if getgenv().SkeetConfig.Aimbot and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local target = getClosestPlayer()
+        local target = nil
+        local dist = getgenv().SkeetConfig.AimFOV
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
+                if not getgenv().SkeetConfig.TeamCheck or v.Team ~= LocalPlayer.Team then
+                    local pos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                    if onScreen then
+                        local mag = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+                        if mag < dist then
+                            target = v
+                            dist = mag
+                        end
+                    end
+                end
+            end
+        end
         if target then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[getgenv().SkeetConfig.AimPart].Position)
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
         end
     end
 
@@ -150,8 +160,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-Rayfield:Notify({
-   Title = "Skeet.cc Loaded",
-   Content = "Press RightShift to open menu",
-   Duration = 5
-})
+Rayfield:Notify({Title = "Skeet Loaded", Content = "RightShift to toggle", Duration = 5})
