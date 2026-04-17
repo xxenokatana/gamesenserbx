@@ -1,6 +1,6 @@
 --[[ 
     GAMESENSE.PUB (Skeet) for BloxStrike
-    Fixed & Connected to UI
+   
 --]]
 
 local Players = game:GetService("Players")
