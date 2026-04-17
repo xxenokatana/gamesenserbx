@@ -1,5 +1,6 @@
 --[[ 
     GAMESENSE.PUB (Skeet) for BloxStrike
+    Fixed & Connected to UI
 --]]
 
 local Players = game:GetService("Players")
@@ -7,12 +8,11 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
 
--- Подгружаем Rayfield
+-- Подгружаем библиотеку интерфейса
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Глобальные настройки
+-- Глобальная таблица настроек (связывает меню и чит)
 getgenv().SkeetConfig = {
     Aimbot = false,
     AimPart = "Head",
@@ -28,46 +28,57 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = { Enabled = true, FileName = "SkeetConfig" }
 })
 
-local Tab = Window:CreateTab("Main")
+-- Вкладка "Главная"
+local Tab = Window:CreateTab("Main", 4483362458)
 
 Tab:CreateSection("Combat")
 
+-- Кнопка включения аимбота
 Tab:CreateToggle({
    Name = "Aimbot (Hold Right Click)",
    CurrentValue = false,
-   Callback = function(Value) getgenv().SkeetConfig.Aimbot = Value end,
+   Callback = function(Value) 
+       getgenv().SkeetConfig.Aimbot = Value 
+   end,
 })
 
+-- Ползунок радиуса (FOV)
 Tab:CreateSlider({
    Name = "Aim FOV",
-   Min = 50, Max = 500, CurrentValue = 150,
-   Callback = function(Value) getgenv().SkeetConfig.AimFOV = Value end,
+   Min = 50, Max = 800, CurrentValue = 150,
+   Callback = function(Value) 
+       getgenv().SkeetConfig.AimFOV = Value 
+   end,
 })
 
 Tab:CreateSection("Visuals")
 
+-- Кнопка включения ВХ
 Tab:CreateToggle({
    Name = "ESP (Chams)",
    CurrentValue = false,
-   Callback = function(Value) getgenv().SkeetConfig.ESP = Value end,
+   Callback = function(Value) 
+       getgenv().SkeetConfig.ESP = Value 
+   end,
 })
 
-Tab:CreateSection("Misc")
+Tab:CreateSection("Movement")
 
 Tab:CreateToggle({
    Name = "BunnyHop",
    CurrentValue = false,
-   Callback = function(Value) getgenv().SkeetConfig.Bhop = Value end,
+   Callback = function(Value) 
+       getgenv().SkeetConfig.Bhop = Value 
+   end,
 })
 
--- Отрисовка FOV кольца
+-- ЛОГИКА АИМБОТА
 local FOVring = Drawing.new("Circle")
 FOVring.Visible = true
 FOVring.Thickness = 1
-FOVring.Color = Color3.fromRGB(0, 255, 0)
+FOVring.Color = Color3.fromRGB(255, 255, 255)
 FOVring.Filled = false
 
--- Функция поиска ближайшего игрока
 local function getClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = getgenv().SkeetConfig.AimFOV
@@ -90,7 +101,7 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
--- Логика Чамсов (ESP)
+-- ЛОГИКА ВХ (ЧАМСЫ)
 local function CreateESP(Player)
     local Highlight = Instance.new("Highlight")
     Highlight.Name = "SkeetHighlight"
@@ -110,20 +121,20 @@ local function CreateESP(Player)
     end)
 end
 
--- Запуск ESP для всех
+-- Запуск ВХ для всех
 for _, p in pairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then CreateESP(p) end
 end
 Players.PlayerAdded:Connect(CreateESP)
 
--- Основной цикл
+-- ОБЩИЙ ЦИКЛ ОБНОВЛЕНИЯ
 RunService.RenderStepped:Connect(function()
     -- Обновляем кольцо FOV
     FOVring.Radius = getgenv().SkeetConfig.AimFOV
     FOVring.Position = UIS:GetMouseLocation()
     FOVring.Visible = getgenv().SkeetConfig.Aimbot
 
-    -- Работа Аимбота
+    -- Аимбот (срабатывает при зажатии правой кнопки мыши)
     if getgenv().SkeetConfig.Aimbot and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local target = getClosestPlayer()
         if target then
@@ -131,7 +142,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Работа Бхопа
+    -- Бхоп
     if getgenv().SkeetConfig.Bhop and UIS:IsKeyDown(Enum.KeyCode.Space) then
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid.Jump = true
@@ -141,6 +152,6 @@ end)
 
 Rayfield:Notify({
    Title = "Skeet.cc Loaded",
-   Content = "Welcome back, legend. Menu: RightShift",
+   Content = "Press RightShift to open menu",
    Duration = 5
 })
